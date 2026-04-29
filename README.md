@@ -26,13 +26,15 @@ Este projeto responde perguntas reais de negócio:
 churn-analysis-sql/
 │
 ├── scripts/
-│   ├── 01_schema.sql       # Criação do schema
-│   ├── 02_ddl.sql          # Criação das tabelas
-│   ├── 03_dml.sql          # Inserção de dados fictícios
-│   └── 04_analytics.sql    # Queries analíticas
+│   ├── 01_schema.sql        # Criação do schema
+│   ├── 02_ddl.sql           # Criação das tabelas com constraints
+│   ├── 03_dml.sql           # Inserção de dados fictícios realistas
+│   ├── 04_analytics.sql     # Queries analíticas (Níveis 1 ao 5)
+│   ├── 05_views.sql         # Views para consultas recorrentes
+│   └── 06_indexes.sql       # Índices e otimização com EXPLAIN
 │
-├── docs/                   # Diagramas e documentação visual
-├── data/                   # Dados exportados em CSV
+├── docs/                    # Diagramas e documentação visual
+├── data/                    # Dados exportados em CSV
 ├── .gitignore
 └── README.md
 ```
@@ -49,7 +51,7 @@ O modelo foi projetado para suportar análise histórica de churn — cada assin
 |---|---|
 | `customers` | Dados cadastrais e canal de aquisição |
 | `plans` | Planos disponíveis e preços |
-| `subscriptions` | Histórico de contratos por cliente |
+| `subscriptions` | Histórico de contratos por cliente (tabela central) |
 | `invoices` | Faturas geradas por assinatura |
 | `support_tickets` | Chamados abertos pelo cliente |
 | `events` | Log comportamental no produto |
@@ -85,41 +87,82 @@ O modelo foi projetado para suportar análise histórica de churn — cada assin
 CREATE DATABASE churn_analysis;
 
 -- 2. Execute os scripts na ordem:
--- 01_schema.sql → 02_ddl.sql → 03_dml.sql → 04_analytics.sql
+-- 01_schema.sql → 02_ddl.sql → 03_dml.sql
+-- → 04_analytics.sql → 05_views.sql → 06_indexes.sql
 ```
-
-Execute cada arquivo dentro do database `churn_analysis` no pgAdmin ou via terminal.
 
 ---
 
 ## Análises Implementadas
 
-### Nível 1 — Filtros e seleções
-- Planos disponíveis por preço
-- Clientes por estado
-- Assinaturas ativas
-- Faturas em atraso
+### Nível 1 — SELECT + filtros
+Perguntas diretas sobre uma tabela: planos disponíveis, clientes por estado, assinaturas ativas, faturas em atraso.
 
-### Nível 2 — Agregações
-- Distribuição de clientes por canal de aquisição
-- Volume de assinaturas por status
-- Receita total por status de pagamento
+### Nível 2 — GROUP BY + agregações
+Distribuição de clientes por canal de aquisição, receita por status de pagamento, ticket médio por status.
 
-### Em construção 🚧
-- JOINs entre tabelas para visão consolidada do cliente
-- CTEs para cálculo de churn mensal
-- Window Functions para ranking e análise temporal
-- Views para KPIs de retenção e LTV
-- Otimização com índices e EXPLAIN
+### Nível 3 — JOINs
+Relacionamento entre tabelas para responder perguntas cruzadas:
+- Clientes ativos com nome do plano
+- Clientes que cancelaram e o motivo
+- Clientes com faturas em atraso (JOIN em cadeia: invoices → subscriptions → customers)
+- Clientes que nunca abriram ticket (LEFT JOIN + IS NULL)
+
+### Nível 4 — CTEs (Common Table Expressions)
+Queries em etapas para responder perguntas mais complexas:
+- Clientes que cancelaram e também abriram tickets
+- Clientes com mais de um ticket de suporte
+- Clientes que gastaram mais de R$100 em faturas pagas
+- Clientes que cancelaram mas nunca abriram ticket (CTE + LEFT JOIN + IS NULL)
+
+### Nível 5 — Window Functions
+Cálculos analíticos sem perder o detalhe das linhas:
+- Ranking de clientes por valor total pago (`RANK`)
+- Total acumulado de faturas pagas ao longo do tempo (`SUM OVER`)
+- Ordem de cadastro dos clientes (`ROW_NUMBER`)
+- Ranking por valor pago dentro de cada plano (`RANK + PARTITION BY`)
+
+---
+
+## Views Criadas
+
+Views são queries salvas com nome no banco — consultadas como tabelas, mas calculadas em tempo real.
+
+| View | Descrição |
+|------|-----------|
+| `v_eventos_sp` | Eventos de clientes de São Paulo |
+| `v_cancelamentos_preco` | Cancelamentos por motivo "too_expensive" |
+| `v_ativa_com_suporte` | Clientes com assinatura ativa e ticket em aberto |
+| `v_logins_ativos` | Logins de clientes com assinatura ativa |
+
+---
+
+## Otimização
+
+Índices criados para acelerar as queries mais frequentes do projeto:
+
+| Índice | Tabela | Coluna | Justificativa |
+|--------|--------|--------|---------------|
+| `idx_subscriptions_status` | subscriptions | status | Filtro em toda query de churn |
+| `idx_subscriptions_customer` | subscriptions | id_customer | JOIN frequente com customers |
+| `idx_invoices_status` | invoices | status | Filtro de inadimplência |
+| `idx_invoices_subscription` | invoices | id_subscription | JOIN com subscriptions |
+| `idx_tickets_customer` | support_tickets | id_customer | JOIN com customers |
+| `idx_events_customer` | events | id_customer | Tabela de alto volume |
 
 ---
 
 ## Autora
 
 **Beatriz Andrade**
-[GitHub](https://github.com/BeatrizAndradeDS)
+
+Analista de Dados com experiência em preparação, análise e visualização de dados para apoio à tomada de decisão estratégica. Atuação como elo entre áreas de negócio, liderança e dados, com histórico em indicadores, dashboards executivos e geração de insights acionáveis.
+
+Pós-graduada em Ciência de Dados (Data Science Academy, 2026). Experiência prática com Power BI, Python (pandas) e SQL.
+
+[LinkedIn](https://www.linkedin.com/in/andrade-beatriz/) | [GitHub](https://github.com/BeatrizAndradeDS)
 
 ---
 
 > Projeto desenvolvido para portfólio em Data Analytics.
-> Todos os dados são fictícios, gerados para fins educacionais.
+> Todos os dados são fictícios.
