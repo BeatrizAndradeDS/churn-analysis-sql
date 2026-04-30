@@ -45,6 +45,9 @@ churn-analysis-sql/
 
 O modelo foi projetado para suportar análise histórica de churn — cada assinatura é registrada como um evento independente, preservando o histórico completo do cliente.
 
+![Diagrama ER](docs/er_diagram.png)
+
+
 ### Entidades
 
 | Tabela | Descrição |
