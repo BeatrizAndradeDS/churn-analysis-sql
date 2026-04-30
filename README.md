@@ -164,5 +164,5 @@ Pós-graduada em Ciência de Dados (Data Science Academy, 2026). Experiência pr
 
 ---
 
-> Projeto desenvolvido para portfólio em Data Analytics.
-> Todos os dados são fictícios.
+> Projeto desenvolvido para portfólio em Data Analytics. Todos os dados são fictícios.
+> Desenvolvido com orientação técnica incremental, priorizando compreensão sobre cada decisão de modelagem e SQL.
